@@ -66,21 +66,19 @@
       return letters.every(ch => ch === ch.toLowerCase());
     }
 
-    function hasFiveOrMoreSameDigitsInRow(str) {
-      return /(\d)\1{4,}/.test(str);  // 5つ以上連続
+    function hasSameVowelCounts(str) {
+      const counts = { a: 0, e: 0, i: 0, o: 0, u: 0 };
+      for (const ch of str) {
+        if (counts.hasOwnProperty(ch)) {
+          counts[ch]++;
+        }
+      }
+      const values = Object.values(counts);
+      return values.every(count => count === values[0] && count > 0);
     }
 
-    function allVowelsEqualCount(str) {
-      const lower = str.toLowerCase();
-      const counts = {
-        a: (lower.match(/a/g) || []).length,
-        e: (lower.match(/e/g) || []).length,
-        i: (lower.match(/i/g) || []).length,
-        o: (lower.match(/o/g) || []).length,
-        u: (lower.match(/u/g) || []).length,
-      };
-      const values = Object.values(counts);
-      return values.every((val) => val === values[0] && val > 0);
+    function hasSameDigitFiveTimes(str) {
+      return /(\d)\1{4,}/.test(str);
     }
 
     const conditions = [
@@ -90,8 +88,8 @@
       (input) => input.includes("!"),
       (input) => includesAllVowels(input.toLowerCase()),
       (input) => isAllLettersLowercase(input),
-      (input) => hasFiveOrMoreSameDigitsInRow(input),
-      (input) => allVowelsEqualCount(input),
+      (input) => hasSameDigitFiveTimes(input),
+      (input) => hasSameVowelCounts(input.toLowerCase())
     ];
 
     const messages = [
@@ -101,20 +99,11 @@
       `文字列に "!" を含めてください`,
       `母音（a, e, i, o, u）をすべて含めてください`,
       `すべて小文字で入力してください`,
-      `同じ数字を5つ以上連続させてください（例: 11111, 99999）`,
+      `同じ数字を5つ以上連続して入力してください`,
       `a, e, i, o, u をすべて同じ数だけ含めてください`,
     ];
 
-    const conditionDescriptions = [
-      `果物の名前 <strong>{word}</strong> を含む`,
-      `今日の日付（${getTodayString()}）を含む`,
-      `数字の合計が <strong>{sum}</strong>`,
-      `"!" を含む`,
-      `a, e, i, o, u をすべて含む`,
-      `すべて小文字である`,
-      `同じ数字が5文字以上連続している`,
-      `a, e, i, o, u がすべて同じ数だけ含まれている`,
-    ];
+    const conditionDescriptions = [...messages];
 
     function updateMessage() {
       let msg = messages[step];
@@ -145,7 +134,7 @@
 
     function startGame() {
       step = 0;
-      targetSum = 0;
+      targetSum = Math.floor(Math.random() * 11) + 40;
       newWord();
       updateMessage();
       updateClearedConditions();
@@ -153,40 +142,29 @@
       document.getElementById("input").focus();
     }
 
-    function checkAllConditions(input, step) {
-      for (let i = 0; i <= step; i++) {
-        if (!conditions[i](input)) {
-          return false;
-        }
+    function tryAdvanceStep(inputValue) {
+      // targetSumを次のステップ前に生成
+      if (step === 2 && targetSum === 0) {
+        targetSum = Math.floor(Math.random() * 11) + 40;
+        updateMessage(); // メッセージ更新
       }
-      return true;
-    }
 
-    document.getElementById("input").addEventListener("input", function () {
-      const inputValue = this.value;
-
-      if (checkAllConditions(inputValue, step)) {
-        while (step < conditions.length) {
-          if (step === 2) {
-            targetSum = Math.floor(Math.random() * 11) + 40;
-          }
-
-          if (conditions[step](inputValue)) {
-            step++;
-            updateMessage();
-            updateClearedConditions();
-          } else {
-            updateMessage();
-            updateClearedConditions();
-            break;
-          }
-        }
+      if (conditions[step](inputValue)) {
+        step++;
+        updateMessage();
+        updateClearedConditions();
 
         if (step >= conditions.length) {
           alert("すべての条件をクリアしました！おめでとう！");
           startGame();
+        } else {
+          tryAdvanceStep(inputValue); // 次の条件に現在の入力が適合するかも確認
         }
       }
+    }
+
+    document.getElementById("input").addEventListener("input", function () {
+      tryAdvanceStep(this.value);
     });
 
     startGame();
