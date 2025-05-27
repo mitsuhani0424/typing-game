@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>タイピングゲーム</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+
+    #word {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    input {
+      font-size: 20px;
+      padding: 5px;
+      width: 300px;
+    }
+
+    #cleared-conditions {
+      margin-top: 30px;
+      font-size: 18px;
+      text-align: left;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>タイピングゲーム</h1>
+  <p id="word"></p>
+  <input type="text" id="input" autofocus autocomplete="off" />
+  <div id="cleared-conditions"></div>
+
+  <script>
+    const words = ["apple", "banana", "cherry", "grape", "orange"];
+    let step = 0;
+    let currentWord = "";
+    let targetSum = 0;
+
+    function getTodayString() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}${month}${day}`;
+    }
+
+    function sumDigits(str) {
+      return (str.match(/\d/g) || []).reduce((acc, d) => acc + Number(d), 0);
+    }
+
+    function includesAllVowels(str) {
+      return ['a', 'e', 'i', 'o', 'u'].every(v => str.includes(v));
+    }
+
+    function isAllLettersLowercase(str) {
+      const letters = str.match(/[a-zA-Z]/g);
+      if (!letters) return false;
+      return letters.every(ch => ch === ch.toLowerCase());
+    }
+
+    function hasFiveOrMoreSameDigitsInRow(str) {
+      return /(\d)\1{4,}/.test(str);  // 5つ以上連続
+    }
+
+    function allVowelsEqualCount(str) {
+      const lower = str.toLowerCase();
+      const counts = {
+        a: (lower.match(/a/g) || []).length,
+        e: (lower.match(/e/g) || []).length,
+        i: (lower.match(/i/g) || []).length,
+        o: (lower.match(/o/g) || []).length,
+        u: (lower.match(/u/g) || []).length,
+      };
+      const values = Object.values(counts);
+      return values.every((val) => val === values[0] && val > 0);
+    }
+
+    const conditions = [
+      (input) => input.includes(currentWord),
+      (input) => input.includes(getTodayString()),
+      (input) => sumDigits(input) === targetSum,
+      (input) => input.includes("!"),
+      (input) => includesAllVowels(input.toLowerCase()),
+      (input) => isAllLettersLowercase(input),
+      (input) => hasFiveOrMoreSameDigitsInRow(input),
+      (input) => allVowelsEqualCount(input),
+    ];
+
+    const messages = [
+      `次の果物の名前を含む文字列を入力してください: <strong>{word}</strong>`,
+      `入力に今日の日付（${getTodayString()}）を含めてください`,
+      `入力に含まれる数字の合計が <strong>{sum}</strong> になるようにしてください`,
+      `文字列に "!" を含めてください`,
+      `母音（a, e, i, o, u）をすべて含めてください`,
+      `すべて小文字で入力してください`,
+      `同じ数字を5つ以上連続させてください（例: 11111, 99999）`,
+      `a, e, i, o, u をすべて同じ数だけ含めてください`,
+    ];
+
+    const conditionDescriptions = [
+      `果物の名前 <strong>{word}</strong> を含む`,
+      `今日の日付（${getTodayString()}）を含む`,
+      `数字の合計が <strong>{sum}</strong>`,
+      `"!" を含む`,
+      `a, e, i, o, u をすべて含む`,
+      `すべて小文字である`,
+      `同じ数字が5文字以上連続している`,
+      `a, e, i, o, u がすべて同じ数だけ含まれている`,
+    ];
+
+    function updateMessage() {
+      let msg = messages[step];
+      if (step === 0) {
+        msg = msg.replace("{word}", currentWord);
+      } else if (step === 2) {
+        msg = msg.replace("{sum}", targetSum);
+      }
+      document.getElementById("word").innerHTML = msg;
+    }
+
+    function updateClearedConditions() {
+      const container = document.getElementById("cleared-conditions");
+      let html = "<strong>クリア済みの条件：</strong><ul>";
+      for (let i = 0; i < step; i++) {
+        let desc = conditionDescriptions[i];
+        if (i === 0) desc = desc.replace("{word}", currentWord);
+        if (i === 2) desc = desc.replace("{sum}", targetSum);
+        html += `<li>${desc}</li>`;
+      }
+      html += "</ul>";
+      container.innerHTML = html;
+    }
+
+    function newWord() {
+      currentWord = words[Math.floor(Math.random() * words.length)];
+    }
+
+    function startGame() {
+      step = 0;
+      targetSum = 0;
+      newWord();
+      updateMessage();
+      updateClearedConditions();
+      document.getElementById("input").value = "";
+      document.getElementById("input").focus();
+    }
+
+    function checkAllConditions(input, step) {
+      for (let i = 0; i <= step; i++) {
+        if (!conditions[i](input)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    document.getElementById("input").addEventListener("input", function () {
+      const inputValue = this.value;
+
+      if (checkAllConditions(inputValue, step)) {
+        while (step < conditions.length) {
+          if (step === 2) {
+            targetSum = Math.floor(Math.random() * 11) + 40;
+          }
+
+          if (conditions[step](inputValue)) {
+            step++;
+            updateMessage();
+            updateClearedConditions();
+          } else {
+            updateMessage();
+            updateClearedConditions();
+            break;
+          }
+        }
+
+        if (step >= conditions.length) {
+          alert("すべての条件をクリアしました！おめでとう！");
+          startGame();
+        }
+      }
+    });
+
+    startGame();
+  </script>
+</body>
+</html>
